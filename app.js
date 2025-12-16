@@ -32,9 +32,15 @@ const pocketSpeedDisplay = document.getElementById('pocketSpeedDisplay');
 const historyPanel = document.getElementById('historyPanel');
 const historyList = document.getElementById('historyList');
 const btnStartStop = document.getElementById('btnStartStop');
+const gpsAccuracyEl = document.getElementById('gpsAccuracy');
 
 // Timer interval reference
 let timerInterval = null;
+
+// Speed filter threshold (km/h) - speeds below this when accuracy is poor are ignored
+const SPEED_THRESHOLD = 3;
+const ACCURACY_GOOD = 10;  // meters
+const ACCURACY_MEDIUM = 25; // meters
 
 // ===== TRACKING FUNCTIONS =====
 function toggleTracking() {
@@ -79,22 +85,44 @@ function stopTracking() {
         timerInterval = null;
     }
 
+    // Prompt to save trip if there's meaningful data
+    if (totalDistance > 0.01 || maxSpeed > 0) {
+        if (confirm("Simpan perjalanan ini ke riwayat?")) {
+            saveTripToHistory();
+        }
+    }
+
     // Update button
     btnStartStop.innerText = "▶ Start";
     btnStartStop.classList.remove('btn-stop');
     btnStartStop.classList.add('btn-start');
     statusMsgEl.innerText = "Tracking dihentikan";
 
-    // Reset speed display
+    // Reset speed display (but keep stats visible)
     currentSpeed = 0;
     speedEl.innerText = "0";
     pocketSpeedDisplay.innerText = "0";
 }
 
 function updatePosition(position) {
-    statusMsgEl.innerText = "GPS Aktif - Tracking...";
+    const accuracy = position.coords.accuracy; // in meters
     let speedMs = position.coords.speed;
-    currentSpeed = (speedMs && speedMs > 0) ? (speedMs * 3.6) : 0;
+    let rawSpeed = (speedMs && speedMs > 0) ? (speedMs * 3.6) : 0;
+
+    // Update GPS accuracy indicator
+    updateAccuracyIndicator(accuracy);
+
+    // Filter out GPS drift: if accuracy is poor and speed is low, assume stationary
+    if (accuracy > ACCURACY_MEDIUM && rawSpeed < SPEED_THRESHOLD) {
+        currentSpeed = 0;
+    } else if (accuracy > ACCURACY_GOOD && rawSpeed < SPEED_THRESHOLD / 2) {
+        // Medium accuracy but very low speed - likely drift
+        currentSpeed = 0;
+    } else {
+        currentSpeed = rawSpeed;
+    }
+
+    statusMsgEl.innerText = "GPS Aktif - Tracking...";
 
     // Update Main UI
     speedEl.innerText = Math.round(currentSpeed);
@@ -109,8 +137,9 @@ function updatePosition(position) {
     let currLat = position.coords.latitude;
     let currLon = position.coords.longitude;
 
+    // Only calculate distance if accuracy is reasonable and moving
     if (prevLat != null && prevLon != null) {
-        if (currentSpeed > 1) {
+        if (currentSpeed > SPEED_THRESHOLD && accuracy < ACCURACY_MEDIUM * 2) {
             let dist = calculateDistance(prevLat, prevLon, currLat, currLon);
             totalDistance += dist;
             distanceEl.innerText = totalDistance.toFixed(2);
@@ -118,6 +147,24 @@ function updatePosition(position) {
     }
     prevLat = currLat;
     prevLon = currLon;
+}
+
+function updateAccuracyIndicator(accuracy) {
+    let label, className;
+
+    if (accuracy <= ACCURACY_GOOD) {
+        label = `📍 Akurasi: ±${Math.round(accuracy)}m (Bagus)`;
+        className = 'good';
+    } else if (accuracy <= ACCURACY_MEDIUM) {
+        label = `📍 Akurasi: ±${Math.round(accuracy)}m (Sedang)`;
+        className = 'medium';
+    } else {
+        label = `📍 Akurasi: ±${Math.round(accuracy)}m (Buruk)`;
+        className = 'poor';
+    }
+
+    gpsAccuracyEl.innerText = label;
+    gpsAccuracyEl.className = 'gps-accuracy ' + className;
 }
 
 function updateTimeAndAvg() {

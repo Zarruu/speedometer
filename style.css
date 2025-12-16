@@ -125,6 +125,31 @@ button:active {
     color: #555;
 }
 
+.gps-accuracy {
+    font-size: 0.75rem;
+    margin-top: 5px;
+    padding: 4px 12px;
+    border-radius: 10px;
+    background: #1e1e1e;
+    color: #888;
+    display: inline-block;
+}
+
+.gps-accuracy.good {
+    color: #28a745;
+    background: rgba(40, 167, 69, 0.15);
+}
+
+.gps-accuracy.medium {
+    color: #ffc107;
+    background: rgba(255, 193, 7, 0.15);
+}
+
+.gps-accuracy.poor {
+    color: #ff4444;
+    background: rgba(255, 68, 68, 0.15);
+}
+
 /* ===== POCKET MODE OVERLAY ===== */
 #pocketOverlay {
     position: fixed;
