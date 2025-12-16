@@ -460,7 +460,7 @@
                 <div class="setting-label">Batas Kecepatan</div>
                 <div class="setting-description">Alert akan muncul jika kecepatan melebihi nilai ini</div>
                 <div class="setting-control">
-                    <input type="number" id="speedLimit" value="60" min="10" max="200" onchange="saveSettings()">
+                    <input type="number" id="speedLimit" value="40" min="10" max="200" onchange="saveSettings()">
                     <span class="setting-unit">km/h</span>
                 </div>
             </div>
@@ -525,7 +525,7 @@
         const SETTINGS_KEY = 'viewer_settings';
         let settings = {
             alertEnabled: true,
-            speedLimit: 60,
+            speedLimit: 40,  // Default 40 km/h untuk testing
             soundEnabled: true
         };
 
