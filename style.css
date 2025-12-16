@@ -1,0 +1,290 @@
+/* ===== BASE STYLES ===== */
+* {
+    box-sizing: border-box;
+}
+
+body {
+    background-color: #121212;
+    color: #00ffcc;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    margin: 0;
+    text-align: center;
+    overflow: hidden;
+    user-select: none;
+}
+
+h1 {
+    margin-bottom: 5px;
+    font-size: 1.2rem;
+    color: #888;
+}
+
+/* ===== MAIN SPEED DISPLAY ===== */
+.main-speed {
+    font-size: 5rem;
+    font-weight: bold;
+    margin: 10px 0;
+    text-shadow: 0 0 20px rgba(0, 255, 204, 0.5);
+}
+
+.unit {
+    font-size: 1.5rem;
+    color: #888;
+}
+
+/* ===== STATS GRID ===== */
+.stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin-top: 20px;
+    width: 90%;
+    max-width: 400px;
+}
+
+.stat-box {
+    background: #1e1e1e;
+    padding: 10px;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+.stat-value {
+    font-size: 1.3rem;
+    font-weight: bold;
+    color: #fff;
+}
+
+.stat-label {
+    font-size: 0.7rem;
+    color: #aaa;
+    margin-top: 5px;
+}
+
+/* ===== BUTTONS ===== */
+.btn-group {
+    margin-top: 30px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+button {
+    padding: 12px 20px;
+    border: none;
+    border-radius: 25px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    font-weight: bold;
+    transition: transform 0.2s, opacity 0.2s;
+}
+
+button:hover {
+    opacity: 0.9;
+    transform: scale(1.02);
+}
+
+button:active {
+    transform: scale(0.98);
+}
+
+.btn-reset {
+    background: #ff4444;
+    color: white;
+}
+
+.btn-lock {
+    background: #007bff;
+    color: white;
+}
+
+.btn-history {
+    background: #17a2b8;
+    color: white;
+}
+
+.btn-start {
+    background: #28a745;
+    color: white;
+}
+
+.btn-stop {
+    background: #fd7e14;
+    color: white;
+}
+
+.status {
+    font-size: 0.8rem;
+    margin-top: 20px;
+    color: #555;
+}
+
+/* ===== POCKET MODE OVERLAY ===== */
+#pocketOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: #000000;
+    z-index: 9999;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #333;
+}
+
+.pocket-speed {
+    font-size: 4rem;
+    font-weight: bold;
+    color: #1a1a1a;
+}
+
+.pocket-hint {
+    margin-top: 50px;
+    font-size: 0.9rem;
+    color: #1a1a1a;
+}
+
+/* ===== HISTORY PANEL ===== */
+#historyPanel {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.95);
+    z-index: 9998;
+    display: none;
+    flex-direction: column;
+    padding: 20px;
+    overflow-y: auto;
+}
+
+#historyPanel.active {
+    display: flex;
+}
+
+.history-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #333;
+}
+
+.history-header h2 {
+    margin: 0;
+    color: #00ffcc;
+    font-size: 1.3rem;
+}
+
+.history-header button {
+    background: transparent;
+    color: #888;
+    font-size: 1.5rem;
+    padding: 5px 10px;
+}
+
+.history-list {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.history-empty {
+    color: #555;
+    text-align: center;
+    margin-top: 50px;
+    font-size: 1rem;
+}
+
+.history-item {
+    background: #1e1e1e;
+    border-radius: 12px;
+    padding: 15px;
+    margin-bottom: 12px;
+    position: relative;
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.history-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.history-date {
+    color: #00ffcc;
+    font-weight: bold;
+    font-size: 0.9rem;
+}
+
+.history-delete {
+    background: #ff4444;
+    color: white;
+    padding: 5px 10px;
+    font-size: 0.75rem;
+    border-radius: 15px;
+}
+
+.history-stats {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+}
+
+.history-stat {
+    text-align: left;
+}
+
+.history-stat-value {
+    color: #fff;
+    font-weight: bold;
+    font-size: 1rem;
+}
+
+.history-stat-label {
+    color: #666;
+    font-size: 0.7rem;
+}
+
+.history-footer {
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid #333;
+    display: flex;
+    gap: 10px;
+}
+
+.btn-clear-all {
+    flex: 1;
+    background: #ff4444;
+    color: white;
+}
+
+.btn-close-history {
+    flex: 1;
+    background: #444;
+    color: white;
+}

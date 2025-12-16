@@ -1,105 +1,17 @@
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Web Speedometer</title>
-    <style>
-        /* Base Styles */
-        body {
-            background-color: #121212;
-            color: #00ffcc;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            margin: 0;
-            text-align: center;
-            overflow: hidden; /* Mencegah scroll */
-            user-select: none; /* Mencegah teks terblok */
-        }
-        h1 { margin-bottom: 5px; font-size: 1.2rem; color: #888; }
-        
-        .main-speed {
-            font-size: 5rem;
-            font-weight: bold;
-            margin: 10px 0;
-            text-shadow: 0 0 20px rgba(0, 255, 204, 0.5);
-        }
-        .unit { font-size: 1.5rem; color: #888; }
-        
-        .stats-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin-top: 20px;
-            width: 90%;
-            max-width: 400px;
-        }
-        .stat-box {
-            background: #1e1e1e;
-            padding: 10px;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-        }
-        .stat-value { font-size: 1.3rem; font-weight: bold; color: #fff; }
-        .stat-label { font-size: 0.7rem; color: #aaa; margin-top: 5px; }
-
-        .btn-group {
-            margin-top: 30px;
-            display: flex;
-            gap: 15px;
-        }
-
-        button {
-            padding: 12px 20px;
-            border: none;
-            border-radius: 25px;
-            font-size: 1rem;
-            cursor: pointer;
-            font-weight: bold;
-        }
-
-        .btn-reset { background: #ff4444; color: white; }
-        .btn-lock { background: #007bff; color: white; }
-
-        .status { font-size: 0.8rem; margin-top: 20px; color: #555; }
-
-        /* --- POCKET MODE STYLES --- */
-        #pocketOverlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: #000000; /* Hitam pekat hemat baterai */
-            z-index: 9999; /* Pastikan di paling atas */
-            display: none; /* Default hidden */
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            color: #333; /* Teks sangat redup */
-        }
-
-        /* Saat mode saku aktif, kita tetap tampilkan speed tapi sangat redup */
-        .pocket-speed {
-            font-size: 4rem;
-            font-weight: bold;
-            color: #1a1a1a; /* Hampir tidak terlihat */
-        }
-        .pocket-hint {
-            margin-top: 50px;
-            font-size: 0.9rem;
-            color: #1a1a1a;
-        }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
 
     <h1>SPEEDOMETER</h1>
-    
+
     <div>
         <div class="main-speed" id="speed">0</div>
         <div class="unit">km/h</div>
@@ -125,175 +37,36 @@
     </div>
 
     <div class="status" id="statusMsg">Menunggu GPS...</div>
-    
+
     <div class="btn-group">
+        <button class="btn-start" id="btnStartStop" onclick="toggleTracking()">▶ Start</button>
         <button class="btn-lock" onclick="enablePocketMode()">🔒 Mode Saku</button>
+        <button class="btn-history" onclick="toggleHistoryPanel()">📋 Riwayat</button>
         <button class="btn-reset" onclick="resetTrip()">Reset</button>
     </div>
 
+    <!-- Pocket Mode Overlay -->
     <div id="pocketOverlay">
         <div class="pocket-speed" id="pocketSpeedDisplay">0</div>
         <div class="pocket-hint">Ketuk 2x layar untuk buka kunci</div>
     </div>
 
-    <script>
-        // --- LOGIC UTAMA SAMA SEPERTI SEBELUMNYA ---
-        let watchId = null;
-        let maxSpeed = 0;
-        let totalDistance = 0; 
-        let startTime = null;
-        let prevLat = null;
-        let prevLon = null;
-        let currentSpeed = 0;
+    <!-- History Panel -->
+    <div id="historyPanel">
+        <div class="history-header">
+            <h2>📋 Riwayat Perjalanan</h2>
+            <button onclick="toggleHistoryPanel()">✕</button>
+        </div>
+        <div class="history-list" id="historyList">
+            <!-- Items rendered by JavaScript -->
+        </div>
+        <div class="history-footer">
+            <button class="btn-clear-all" onclick="clearAllHistory()">Hapus Semua</button>
+            <button class="btn-close-history" onclick="toggleHistoryPanel()">Tutup</button>
+        </div>
+    </div>
 
-        const options = { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 };
-
-        function startTracking() {
-            if (!navigator.geolocation) return;
-            startTime = new Date();
-            watchId = navigator.geolocation.watchPosition(updatePosition, handleError, options);
-            setInterval(updateTimeAndAvg, 1000);
-            
-            // Aktifkan Wake Lock agar layar tidak mati otomatis
-            requestWakeLock();
-        }
-
-        function updatePosition(position) {
-            document.getElementById('statusMsg').innerText = "GPS Aktif - Tracking...";
-            let speedMs = position.coords.speed; 
-            currentSpeed = (speedMs && speedMs > 0) ? (speedMs * 3.6) : 0;
-            
-            // Update UI Utama
-            document.getElementById('speed').innerText = Math.round(currentSpeed);
-            // Update UI Pocket Mode (Redup)
-            document.getElementById('pocketSpeedDisplay').innerText = Math.round(currentSpeed);
-
-            if (currentSpeed > maxSpeed) {
-                maxSpeed = currentSpeed;
-                document.getElementById('maxSpeed').innerText = Math.round(maxSpeed);
-            }
-
-            let currLat = position.coords.latitude;
-            let currLon = position.coords.longitude;
-
-            if (prevLat != null && prevLon != null) {
-                if (currentSpeed > 1) { 
-                    let dist = calculateDistance(prevLat, prevLon, currLat, currLon);
-                    totalDistance += dist;
-                    document.getElementById('distance').innerText = totalDistance.toFixed(2);
-                }
-            }
-            prevLat = currLat;
-            prevLon = currLon;
-        }
-
-        function updateTimeAndAvg() {
-            if (!startTime) return;
-            let now = new Date();
-            let diffMs = now - startTime; 
-            let diffHrs = diffMs / (1000 * 60 * 60); 
-
-            let seconds = Math.floor((diffMs / 1000) % 60);
-            let minutes = Math.floor((diffMs / (1000 * 60)) % 60);
-            let hours = Math.floor((diffMs / (1000 * 60 * 60)));
-
-            let timeString = 
-                (hours > 0 ? String(hours).padStart(2, '0') + ":" : "") +
-                String(minutes).padStart(2, '0') + ":" + 
-                String(seconds).padStart(2, '0');
-            
-            document.getElementById('time').innerText = timeString;
-
-            if (diffHrs > 0 && totalDistance > 0) {
-                let avg = totalDistance / diffHrs;
-                document.getElementById('avgSpeed').innerText = Math.round(avg);
-            }
-        }
-
-        function calculateDistance(lat1, lon1, lat2, lon2) {
-            const R = 6371; 
-            const dLat = (lat2 - lat1) * Math.PI / 180;
-            const dLon = (lon2 - lon1) * Math.PI / 180;
-            const a = 
-                Math.sin(dLat/2) * Math.sin(dLat/2) +
-                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-            return R * c;
-        }
-
-        function handleError(error) {
-            document.getElementById('statusMsg').innerText = "Error GPS: " + error.message;
-        }
-
-        function resetTrip() {
-            if(!confirm("Reset data perjalanan?")) return;
-            maxSpeed = 0; totalDistance = 0; currentSpeed = 0;
-            startTime = new Date(); prevLat = null; prevLon = null;
-            document.getElementById('speed').innerText = "0";
-            document.getElementById('maxSpeed').innerText = "0";
-            document.getElementById('avgSpeed').innerText = "0";
-            document.getElementById('distance').innerText = "0.00";
-            document.getElementById('time').innerText = "00:00";
-        }
-
-        // --- FITUR POCKET MODE & WAKE LOCK ---
-
-        // 1. Wake Lock (Agar layar tidak tidur otomatis)
-        let wakeLock = null;
-        async function requestWakeLock() {
-            try {
-                wakeLock = await navigator.wakeLock.request('screen');
-                console.log('Screen Wake Lock Active');
-                wakeLock.addEventListener('release', () => {
-                    console.log('Screen Wake Lock Released');
-                    // Coba request ulang jika lepas
-                    requestWakeLock();
-                });
-            } catch (err) {
-                console.error(`${err.name}, ${err.message}`);
-            }
-        }
-
-        // Re-request wake lock saat tab aktif kembali (jika sempat minimize)
-        document.addEventListener('visibilitychange', async () => {
-            if (wakeLock !== null && document.visibilityState === 'visible') {
-                requestWakeLock();
-            }
-        });
-
-        // 2. Pocket Mode Logic
-        const pocketOverlay = document.getElementById('pocketOverlay');
-        let lastTap = 0;
-
-        function enablePocketMode() {
-            pocketOverlay.style.display = 'flex';
-            // Request full screen untuk pengalaman lebih immersive (opsional)
-            if (document.documentElement.requestFullscreen) {
-                document.documentElement.requestFullscreen().catch((e)=>{});
-            }
-        }
-
-        // Deteksi Double Tap pada Overlay
-        pocketOverlay.addEventListener('click', (e) => {
-            const currentTime = new Date().getTime();
-            const tapLength = currentTime - lastTap;
-            
-            // Jika jeda antar tap kurang dari 500ms, dianggap double tap
-            if (tapLength < 500 && tapLength > 0) {
-                disablePocketMode();
-                e.preventDefault();
-            }
-            lastTap = currentTime;
-        });
-
-        function disablePocketMode() {
-            pocketOverlay.style.display = 'none';
-            if (document.exitFullscreen) {
-                document.exitFullscreen().catch((e)=>{});
-            }
-        }
-
-        startTracking();
-    </script>
+    <script src="app.js"></script>
 </body>
+
 </html>
