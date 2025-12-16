@@ -22,6 +22,7 @@
             --color-primary: #00ffcc;
             --color-bg: #0a0a0a;
             --color-card: #1a1a1a;
+            --color-danger: #ef4444;
         }
 
         body {
@@ -52,6 +53,22 @@
             font-size: 1rem;
             font-weight: 600;
             color: var(--color-primary);
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .settings-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: #888;
+            padding: 6px 10px;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
         }
 
         .live-badge {
@@ -88,6 +105,44 @@
             z-index: 1;
         }
 
+        /* Speed Alert Banner */
+        .speed-alert {
+            position: fixed;
+            top: 60px;
+            left: 0;
+            right: 0;
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+            padding: 12px 20px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 1rem;
+            z-index: 1001;
+            display: none;
+            animation: alertPulse 1s infinite;
+            box-shadow: 0 4px 20px rgba(239, 68, 68, 0.5);
+        }
+
+        .speed-alert.active {
+            display: block;
+        }
+
+        @keyframes alertPulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.8;
+            }
+        }
+
+        .speed-alert .alert-icon {
+            margin-right: 8px;
+        }
+
         /* Speed Overlay */
         .speed-overlay {
             position: fixed;
@@ -103,6 +158,12 @@
             gap: 20px;
             z-index: 1000;
             box-shadow: 0 4px 30px rgba(0, 255, 204, 0.3);
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+
+        .speed-overlay.alert {
+            border-color: var(--color-danger);
+            box-shadow: 0 4px 30px rgba(239, 68, 68, 0.5);
         }
 
         .speed-display {
@@ -114,6 +175,11 @@
             font-weight: 700;
             color: var(--color-primary);
             line-height: 1;
+            transition: color 0.3s;
+        }
+
+        .speed-value.alert {
+            color: var(--color-danger);
         }
 
         .speed-unit {
@@ -174,12 +240,6 @@
             margin-top: 10px;
         }
 
-        /* Accuracy indicator on map */
-        .accuracy-circle {
-            stroke: rgba(0, 255, 204, 0.5);
-            fill: rgba(0, 255, 204, 0.1);
-        }
-
         /* Custom marker */
         .driver-marker {
             width: 20px;
@@ -202,6 +262,144 @@
             color: #888;
             z-index: 1000;
         }
+
+        /* Settings Panel */
+        .settings-panel {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 3000;
+            display: none;
+            flex-direction: column;
+            padding: 20px;
+            padding-top: max(20px, env(safe-area-inset-top));
+        }
+
+        .settings-panel.active {
+            display: flex;
+        }
+
+        .settings-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #2a2a2a;
+        }
+
+        .settings-header h2 {
+            margin: 0;
+            color: var(--color-primary);
+            font-size: 1.2rem;
+        }
+
+        .settings-close {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: #888;
+            padding: 8px 12px;
+            border-radius: 10px;
+            font-size: 1.2rem;
+            cursor: pointer;
+        }
+
+        .settings-content {
+            flex: 1;
+        }
+
+        .setting-item {
+            background: var(--color-card);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 15px;
+        }
+
+        .setting-label {
+            color: white;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .setting-description {
+            color: #666;
+            font-size: 0.85rem;
+            margin-bottom: 15px;
+        }
+
+        .setting-control {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .setting-control input[type="number"] {
+            background: #0a0a0a;
+            border: 1px solid #2a2a2a;
+            border-radius: 10px;
+            padding: 12px 15px;
+            color: white;
+            font-size: 1.1rem;
+            width: 100px;
+            text-align: center;
+        }
+
+        .setting-control input[type="number"]:focus {
+            outline: none;
+            border-color: var(--color-primary);
+        }
+
+        .setting-unit {
+            color: #888;
+            font-size: 0.9rem;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 50px;
+            height: 28px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #333;
+            transition: 0.3s;
+            border-radius: 28px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 22px;
+            width: 22px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: 0.3s;
+            border-radius: 50%;
+        }
+
+        .toggle-switch input:checked+.toggle-slider {
+            background-color: var(--color-primary);
+        }
+
+        .toggle-switch input:checked+.toggle-slider:before {
+            transform: translateX(22px);
+        }
     </style>
 </head>
 
@@ -209,7 +407,16 @@
     <!-- Header -->
     <div class="viewer-header">
         <div class="viewer-title">📍 Live Tracking</div>
-        <div class="live-badge" id="liveBadge">LIVE</div>
+        <div class="header-right">
+            <button class="settings-btn" onclick="toggleSettings()">⚙️</button>
+            <div class="live-badge" id="liveBadge">LIVE</div>
+        </div>
+    </div>
+
+    <!-- Speed Alert Banner -->
+    <div class="speed-alert" id="speedAlert">
+        <span class="alert-icon">⚠️</span>
+        <span id="alertText">Kecepatan tinggi!</span>
     </div>
 
     <!-- Map -->
@@ -230,6 +437,46 @@
 
     <!-- Last Update -->
     <div class="last-update" id="lastUpdate">Menunggu data...</div>
+
+    <!-- Settings Panel -->
+    <div class="settings-panel" id="settingsPanel">
+        <div class="settings-header">
+            <h2>⚙️ Pengaturan Alert</h2>
+            <button class="settings-close" onclick="toggleSettings()">✕</button>
+        </div>
+        <div class="settings-content">
+            <div class="setting-item">
+                <div class="setting-label">Aktifkan Alert Kecepatan</div>
+                <div class="setting-description">Tampilkan peringatan saat pengemudi melebihi batas kecepatan</div>
+                <div class="setting-control">
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="alertEnabled" checked onchange="saveSettings()">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="setting-item">
+                <div class="setting-label">Batas Kecepatan</div>
+                <div class="setting-description">Alert akan muncul jika kecepatan melebihi nilai ini</div>
+                <div class="setting-control">
+                    <input type="number" id="speedLimit" value="60" min="10" max="200" onchange="saveSettings()">
+                    <span class="setting-unit">km/h</span>
+                </div>
+            </div>
+
+            <div class="setting-item">
+                <div class="setting-label">Notifikasi Suara</div>
+                <div class="setting-description">Bunyikan alarm saat kecepatan melebihi batas</div>
+                <div class="setting-control">
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="soundEnabled" checked onchange="saveSettings()">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Loading State -->
     <div class="status-overlay" id="loadingOverlay">
@@ -273,6 +520,124 @@
 
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
+
+        // ===== SETTINGS =====
+        const SETTINGS_KEY = 'viewer_settings';
+        let settings = {
+            alertEnabled: true,
+            speedLimit: 60,
+            soundEnabled: true
+        };
+
+        // Load settings from localStorage
+        function loadSettings() {
+            try {
+                const saved = localStorage.getItem(SETTINGS_KEY);
+                if (saved) {
+                    settings = { ...settings, ...JSON.parse(saved) };
+                }
+                // Apply to UI
+                document.getElementById('alertEnabled').checked = settings.alertEnabled;
+                document.getElementById('speedLimit').value = settings.speedLimit;
+                document.getElementById('soundEnabled').checked = settings.soundEnabled;
+            } catch (e) {
+                console.error('Error loading settings:', e);
+            }
+        }
+
+        function saveSettings() {
+            settings.alertEnabled = document.getElementById('alertEnabled').checked;
+            settings.speedLimit = parseInt(document.getElementById('speedLimit').value) || 60;
+            settings.soundEnabled = document.getElementById('soundEnabled').checked;
+            localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+        }
+
+        function toggleSettings() {
+            document.getElementById('settingsPanel').classList.toggle('active');
+        }
+
+        // ===== ALERT SYSTEM =====
+        let alertActive = false;
+        let alertAudio = null;
+        let lastAlertTime = 0;
+
+        // Create alert sound using Web Audio API
+        function createAlertSound() {
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                return audioContext;
+            } catch (e) {
+                console.log('Audio not supported');
+                return null;
+            }
+        }
+
+        function playAlertSound() {
+            if (!settings.soundEnabled) return;
+
+            // Prevent sound spam - min 3 seconds between alerts
+            const now = Date.now();
+            if (now - lastAlertTime < 3000) return;
+            lastAlertTime = now;
+
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+
+                oscillator.frequency.value = 800;
+                oscillator.type = 'sine';
+                gainNode.gain.value = 0.3;
+
+                oscillator.start();
+
+                // Beep pattern
+                setTimeout(() => { gainNode.gain.value = 0; }, 200);
+                setTimeout(() => { gainNode.gain.value = 0.3; }, 300);
+                setTimeout(() => { gainNode.gain.value = 0; }, 500);
+                setTimeout(() => { gainNode.gain.value = 0.3; }, 600);
+                setTimeout(() => {
+                    oscillator.stop();
+                    audioContext.close();
+                }, 800);
+            } catch (e) {
+                console.log('Could not play alert sound');
+            }
+        }
+
+        function checkSpeedAlert(speed) {
+            const speedAlert = document.getElementById('speedAlert');
+            const speedValue = document.getElementById('currentSpeed');
+            const speedOverlay = document.getElementById('speedOverlay');
+            const alertText = document.getElementById('alertText');
+
+            if (!settings.alertEnabled) {
+                speedAlert.classList.remove('active');
+                speedValue.classList.remove('alert');
+                speedOverlay.classList.remove('alert');
+                return;
+            }
+
+            if (speed >= settings.speedLimit) {
+                if (!alertActive) {
+                    alertActive = true;
+                    playAlertSound();
+                }
+
+                alertText.innerText = `⚠️ Kecepatan ${speed} km/h melebihi batas ${settings.speedLimit} km/h!`;
+                speedAlert.classList.add('active');
+                speedValue.classList.add('alert');
+                speedOverlay.classList.add('alert');
+            } else {
+                alertActive = false;
+                speedAlert.classList.remove('active');
+                speedValue.classList.remove('alert');
+                speedOverlay.classList.remove('alert');
+            }
+        }
 
         // ===== DOM ELEMENTS =====
         const loadingOverlay = document.getElementById('loadingOverlay');
@@ -350,10 +715,15 @@
 
         // ===== UPDATE UI =====
         function updateStats(data) {
-            currentSpeedEl.innerText = data.speed || 0;
+            const speed = data.speed || 0;
+
+            currentSpeedEl.innerText = speed;
             maxSpeedEl.innerText = data.maxSpeed || 0;
             distanceEl.innerText = data.distance || '0.00';
             durationEl.innerText = data.duration || '00:00';
+
+            // Check speed alert
+            checkSpeedAlert(speed);
 
             // Update last update time
             if (data.timestamp) {
@@ -361,6 +731,9 @@
                 lastUpdateEl.innerText = `Update: ${date.toLocaleTimeString('id-ID')}`;
             }
         }
+
+        // ===== INITIALIZE =====
+        loadSettings();
 
         // ===== MAIN =====
         const sessionId = getSessionId();
