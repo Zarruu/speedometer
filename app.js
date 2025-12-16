@@ -1,3 +1,18 @@
+// ===== FIREBASE CONFIGURATION =====
+const firebaseConfig = {
+    apiKey: "AIzaSyC08_DRSJMoPXPBjaPmap-Bdr0tVsYJq68",
+    authDomain: "speedometer-tracker-79737.firebaseapp.com",
+    databaseURL: "https://speedometer-tracker-79737-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "speedometer-tracker-79737",
+    storageBucket: "speedometer-tracker-79737.firebasestorage.app",
+    messagingSenderId: "432424352062",
+    appId: "1:432424352062:web:109828729898ebd102146f"
+};
+
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+const database = firebase.database();
+
 // ===== STATE VARIABLES =====
 let watchId = null;
 let maxSpeed = 0;
@@ -9,6 +24,8 @@ let currentSpeed = 0;
 let wakeLock = null;
 let lastTap = 0;
 let isTracking = false;
+let isSharing = false;
+let sessionId = null;
 
 // GPS Options
 const gpsOptions = {
@@ -19,6 +36,11 @@ const gpsOptions = {
 
 // LocalStorage Key
 const HISTORY_KEY = 'speedometer_history';
+
+// Speed filter threshold
+const SPEED_THRESHOLD = 3;
+const ACCURACY_GOOD = 10;
+const ACCURACY_MEDIUM = 25;
 
 // ===== DOM ELEMENTS =====
 const speedEl = document.getElementById('speed');
@@ -33,14 +55,14 @@ const historyPanel = document.getElementById('historyPanel');
 const historyList = document.getElementById('historyList');
 const btnStartStop = document.getElementById('btnStartStop');
 const gpsAccuracyEl = document.getElementById('gpsAccuracy');
+const sharePanel = document.getElementById('sharePanel');
+const shareLink = document.getElementById('shareLink');
+const btnShare = document.getElementById('btnShare');
+const sharingStatus = document.getElementById('sharingStatus');
 
 // Timer interval reference
 let timerInterval = null;
-
-// Speed filter threshold (km/h) - speeds below this when accuracy is poor are ignored
-const SPEED_THRESHOLD = 3;
-const ACCURACY_GOOD = 10;  // meters
-const ACCURACY_MEDIUM = 25; // meters
+let shareInterval = null;
 
 // ===== TRACKING FUNCTIONS =====
 function toggleTracking() {
@@ -85,6 +107,11 @@ function stopTracking() {
         timerInterval = null;
     }
 
+    // Stop sharing if active
+    if (isSharing) {
+        stopSharing();
+    }
+
     // Prompt to save trip if there's meaningful data
     if (totalDistance > 0.01 || maxSpeed > 0) {
         if (confirm("Simpan perjalanan ini ke riwayat?")) {
@@ -105,28 +132,26 @@ function stopTracking() {
 }
 
 function updatePosition(position) {
-    const accuracy = position.coords.accuracy; // in meters
+    const accuracy = position.coords.accuracy;
     let speedMs = position.coords.speed;
     let rawSpeed = (speedMs && speedMs > 0) ? (speedMs * 3.6) : 0;
 
     // Update GPS accuracy indicator
     updateAccuracyIndicator(accuracy);
 
-    // Filter out GPS drift: if accuracy is poor and speed is low, assume stationary
+    // Filter out GPS drift
     if (accuracy > ACCURACY_MEDIUM && rawSpeed < SPEED_THRESHOLD) {
         currentSpeed = 0;
     } else if (accuracy > ACCURACY_GOOD && rawSpeed < SPEED_THRESHOLD / 2) {
-        // Medium accuracy but very low speed - likely drift
         currentSpeed = 0;
     } else {
         currentSpeed = rawSpeed;
     }
 
-    statusMsgEl.innerText = "GPS Aktif - Tracking...";
+    statusMsgEl.innerText = isSharing ? "🔴 LIVE - Sedang dibagikan" : "GPS Aktif - Tracking...";
 
     // Update Main UI
     speedEl.innerText = Math.round(currentSpeed);
-    // Update Pocket Mode UI
     pocketSpeedDisplay.innerText = Math.round(currentSpeed);
 
     if (currentSpeed > maxSpeed) {
@@ -147,6 +172,11 @@ function updatePosition(position) {
     }
     prevLat = currLat;
     prevLon = currLon;
+
+    // Send to Firebase if sharing
+    if (isSharing && sessionId) {
+        sendLocationToFirebase(currLat, currLon, currentSpeed, accuracy);
+    }
 }
 
 function updateAccuracyIndicator(accuracy) {
@@ -191,7 +221,7 @@ function updateTimeAndAvg() {
 }
 
 function calculateDistance(lat1, lon1, lat2, lon2) {
-    const R = 6371; // Earth radius in km
+    const R = 6371;
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLon = (lon2 - lon1) * Math.PI / 180;
     const a =
@@ -208,18 +238,16 @@ function handleError(error) {
 
 // ===== RESET FUNCTION =====
 function resetTrip() {
-    // Don't save if no meaningful data
-    if (totalDistance > 0.01 || maxSpeed > 0) {
-        if (confirm("Simpan perjalanan ini ke riwayat sebelum reset?")) {
-            saveTripToHistory();
-        }
+    if (isSharing) {
+        if (!confirm("Sedang berbagi lokasi. Stop sharing dan reset?")) return;
+        stopSharing();
     }
 
     // Reset all values
     maxSpeed = 0;
     totalDistance = 0;
     currentSpeed = 0;
-    startTime = new Date();
+    startTime = isTracking ? new Date() : null;
     prevLat = null;
     prevLon = null;
 
@@ -242,7 +270,7 @@ async function requestWakeLock() {
         console.log('Screen Wake Lock Active');
         wakeLock.addEventListener('release', () => {
             console.log('Screen Wake Lock Released');
-            requestWakeLock();
+            if (isTracking) requestWakeLock();
         });
     } catch (err) {
         console.error(`${err.name}, ${err.message}`);
@@ -250,7 +278,7 @@ async function requestWakeLock() {
 }
 
 document.addEventListener('visibilitychange', async () => {
-    if (wakeLock !== null && document.visibilityState === 'visible') {
+    if (wakeLock !== null && document.visibilityState === 'visible' && isTracking) {
         requestWakeLock();
     }
 });
@@ -270,7 +298,6 @@ function disablePocketMode() {
     }
 }
 
-// Double tap to exit pocket mode
 pocketOverlay.addEventListener('click', (e) => {
     const currentTime = new Date().getTime();
     const tapLength = currentTime - lastTap;
@@ -280,6 +307,130 @@ pocketOverlay.addEventListener('click', (e) => {
     }
     lastTap = currentTime;
 });
+
+// ===== LIVE SHARING FUNCTIONS =====
+function generateSessionId() {
+    return 'xxxx-xxxx'.replace(/x/g, () => {
+        return Math.floor(Math.random() * 16).toString(16);
+    }).toUpperCase();
+}
+
+function toggleSharePanel() {
+    sharePanel.classList.toggle('active');
+
+    if (sharePanel.classList.contains('active')) {
+        if (!isTracking) {
+            alert("Mulai tracking terlebih dahulu sebelum berbagi lokasi!");
+            sharePanel.classList.remove('active');
+            return;
+        }
+
+        if (!isSharing) {
+            // Generate new session
+            sessionId = generateSessionId();
+            const baseUrl = window.location.href.replace('index.html', '').replace(/\/$/, '');
+            const viewerUrl = `${baseUrl}/viewer.html?session=${sessionId}`;
+            shareLink.value = viewerUrl;
+            sharingStatus.innerText = "Klik 'Mulai Berbagi' untuk aktifkan";
+            sharingStatus.className = 'sharing-status';
+        }
+    }
+}
+
+function startSharing() {
+    if (!isTracking) {
+        alert("Mulai tracking terlebih dahulu!");
+        return;
+    }
+
+    isSharing = true;
+    btnShare.innerText = "⏹ Stop Berbagi";
+    btnShare.classList.remove('btn-start-share');
+    btnShare.classList.add('btn-stop-share');
+    sharingStatus.innerText = "🔴 LIVE - Lokasi sedang dibagikan";
+    sharingStatus.className = 'sharing-status active';
+    statusMsgEl.innerText = "🔴 LIVE - Sedang dibagikan";
+
+    // Create session in Firebase
+    database.ref('sessions/' + sessionId).set({
+        createdAt: Date.now(),
+        active: true
+    });
+
+    console.log('Sharing started with session:', sessionId);
+}
+
+function stopSharing() {
+    isSharing = false;
+
+    // Update Firebase
+    if (sessionId) {
+        database.ref('sessions/' + sessionId).update({
+            active: false,
+            endedAt: Date.now()
+        });
+    }
+
+    btnShare.innerText = "▶ Mulai Berbagi";
+    btnShare.classList.remove('btn-stop-share');
+    btnShare.classList.add('btn-start-share');
+    sharingStatus.innerText = "Berbagi dihentikan";
+    sharingStatus.className = 'sharing-status';
+
+    if (isTracking) {
+        statusMsgEl.innerText = "GPS Aktif - Tracking...";
+    }
+
+    console.log('Sharing stopped');
+}
+
+function toggleSharing() {
+    if (isSharing) {
+        stopSharing();
+    } else {
+        startSharing();
+    }
+}
+
+function sendLocationToFirebase(lat, lon, speed, accuracy) {
+    if (!sessionId) return;
+
+    database.ref('sessions/' + sessionId + '/location').set({
+        lat: lat,
+        lon: lon,
+        speed: Math.round(speed),
+        accuracy: Math.round(accuracy),
+        maxSpeed: Math.round(maxSpeed),
+        distance: parseFloat(totalDistance.toFixed(2)),
+        duration: timeEl.innerText,
+        timestamp: Date.now()
+    });
+}
+
+function copyShareLink() {
+    shareLink.select();
+    shareLink.setSelectionRange(0, 99999);
+
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(shareLink.value).then(() => {
+            showCopyFeedback();
+        });
+    } else {
+        document.execCommand('copy');
+        showCopyFeedback();
+    }
+}
+
+function showCopyFeedback() {
+    const btn = document.getElementById('btnCopyLink');
+    const originalText = btn.innerText;
+    btn.innerText = "✓ Tersalin!";
+    btn.style.background = "#22c55e";
+    setTimeout(() => {
+        btn.innerText = originalText;
+        btn.style.background = "";
+    }, 2000);
+}
 
 // ===== HISTORY MANAGEMENT =====
 function saveTripToHistory() {
@@ -302,9 +453,8 @@ function saveTripToHistory() {
     };
 
     const history = loadHistory();
-    history.unshift(trip); // Add to beginning
+    history.unshift(trip);
 
-    // Keep only last 50 trips
     if (history.length > 50) {
         history.pop();
     }

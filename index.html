@@ -53,6 +53,7 @@
     <!-- Action Buttons -->
     <div class="btn-group">
         <button class="btn-start" id="btnStartStop" onclick="toggleTracking()">▶ Start</button>
+        <button class="btn-share" onclick="toggleSharePanel()">📡 Share Live</button>
         <button class="btn-lock" onclick="enablePocketMode()">🔒 Mode Saku</button>
         <button class="btn-history" onclick="toggleHistoryPanel()">📋 Riwayat</button>
         <button class="btn-reset" onclick="resetTrip()">🔄 Reset</button>
@@ -62,6 +63,30 @@
     <div id="pocketOverlay">
         <div class="pocket-speed" id="pocketSpeedDisplay">0</div>
         <div class="pocket-hint">Ketuk 2x layar untuk buka kunci</div>
+    </div>
+
+    <!-- Share Panel -->
+    <div id="sharePanel">
+        <div class="share-header">
+            <h2>📡 Bagikan Lokasi Live</h2>
+            <button onclick="toggleSharePanel()">✕</button>
+        </div>
+        <div class="share-content">
+            <p class="share-description">Bagikan link ini ke teman/keluarga untuk memantau lokasi dan kecepatan kamu
+                secara real-time.</p>
+
+            <div class="share-link-container">
+                <input type="text" id="shareLink" readonly placeholder="Link akan muncul saat berbagi...">
+                <button id="btnCopyLink" onclick="copyShareLink()">📋 Copy</button>
+            </div>
+
+            <div class="sharing-status" id="sharingStatus">Klik tombol di bawah untuk mulai</div>
+
+            <button class="btn-start-share" id="btnShare" onclick="toggleSharing()">▶ Mulai Berbagi</button>
+        </div>
+        <div class="share-footer">
+            <button class="btn-close-share" onclick="toggleSharePanel()">Tutup</button>
+        </div>
     </div>
 
     <!-- History Panel -->
@@ -79,6 +104,11 @@
         </div>
     </div>
 
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+    <!-- App Script -->
     <script src="app.js"></script>
 </body>
 

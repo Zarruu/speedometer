@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#0a0a0a">
+    <title>Live Tracking</title>
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --color-primary: #00ffcc;
+            --color-bg: #0a0a0a;
+            --color-card: #1a1a1a;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--color-bg);
+            color: white;
+            height: 100vh;
+            height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Header */
+        .viewer-header {
+            background: var(--color-card);
+            padding: 12px 16px;
+            padding-top: max(12px, env(safe-area-inset-top));
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #2a2a2a;
+            flex-shrink: 0;
+            z-index: 1000;
+        }
+
+        .viewer-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--color-primary);
+        }
+
+        .live-badge {
+            background: #ef4444;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            animation: pulse-badge 2s infinite;
+        }
+
+        .live-badge.offline {
+            background: #666;
+            animation: none;
+        }
+
+        @keyframes pulse-badge {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.6;
+            }
+        }
+
+        /* Map Container */
+        #map {
+            flex: 1;
+            width: 100%;
+            z-index: 1;
+        }
+
+        /* Speed Overlay */
+        .speed-overlay {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.9);
+            border: 2px solid var(--color-primary);
+            border-radius: 20px;
+            padding: 15px 25px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            z-index: 1000;
+            box-shadow: 0 4px 30px rgba(0, 255, 204, 0.3);
+        }
+
+        .speed-display {
+            text-align: center;
+        }
+
+        .speed-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--color-primary);
+            line-height: 1;
+        }
+
+        .speed-unit {
+            font-size: 0.8rem;
+            color: #888;
+        }
+
+        .stats-mini {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .stat-mini {
+            font-size: 0.75rem;
+            color: #aaa;
+        }
+
+        .stat-mini span {
+            color: white;
+            font-weight: 600;
+        }
+
+        /* Loading / Error States */
+        .status-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--color-bg);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+
+        .status-overlay.hidden {
+            display: none;
+        }
+
+        .status-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+        }
+
+        .status-text {
+            font-size: 1.2rem;
+            color: #888;
+            text-align: center;
+            padding: 0 20px;
+        }
+
+        .status-subtext {
+            font-size: 0.9rem;
+            color: #555;
+            margin-top: 10px;
+        }
+
+        /* Accuracy indicator on map */
+        .accuracy-circle {
+            stroke: rgba(0, 255, 204, 0.5);
+            fill: rgba(0, 255, 204, 0.1);
+        }
+
+        /* Custom marker */
+        .driver-marker {
+            width: 20px;
+            height: 20px;
+            background: var(--color-primary);
+            border: 3px solid white;
+            border-radius: 50%;
+            box-shadow: 0 0 10px rgba(0, 255, 204, 0.5);
+        }
+
+        /* Last update time */
+        .last-update {
+            position: fixed;
+            top: 70px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 6px 12px;
+            border-radius: 10px;
+            font-size: 0.7rem;
+            color: #888;
+            z-index: 1000;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Header -->
+    <div class="viewer-header">
+        <div class="viewer-title">📍 Live Tracking</div>
+        <div class="live-badge" id="liveBadge">LIVE</div>
+    </div>
+
+    <!-- Map -->
+    <div id="map"></div>
+
+    <!-- Speed Overlay -->
+    <div class="speed-overlay" id="speedOverlay">
+        <div class="speed-display">
+            <div class="speed-value" id="currentSpeed">--</div>
+            <div class="speed-unit">km/h</div>
+        </div>
+        <div class="stats-mini">
+            <div class="stat-mini">Max: <span id="maxSpeed">--</span> km/h</div>
+            <div class="stat-mini">Jarak: <span id="distance">--</span> km</div>
+            <div class="stat-mini">Durasi: <span id="duration">--</span></div>
+        </div>
+    </div>
+
+    <!-- Last Update -->
+    <div class="last-update" id="lastUpdate">Menunggu data...</div>
+
+    <!-- Loading State -->
+    <div class="status-overlay" id="loadingOverlay">
+        <div class="status-icon">📡</div>
+        <div class="status-text">Menghubungkan ke sesi tracking...</div>
+        <div class="status-subtext" id="sessionIdDisplay">Session ID: --</div>
+    </div>
+
+    <!-- Error State -->
+    <div class="status-overlay hidden" id="errorOverlay">
+        <div class="status-icon">❌</div>
+        <div class="status-text" id="errorText">Sesi tidak ditemukan</div>
+        <div class="status-subtext">Pastikan link yang kamu buka benar</div>
+    </div>
+
+    <!-- Offline State -->
+    <div class="status-overlay hidden" id="offlineOverlay">
+        <div class="status-icon">📴</div>
+        <div class="status-text">Pengemudi sudah offline</div>
+        <div class="status-subtext">Sesi tracking telah berakhir</div>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+    <script>
+        // ===== FIREBASE CONFIG =====
+        const firebaseConfig = {
+            apiKey: "AIzaSyC08_DRSJMoPXPBjaPmap-Bdr0tVsYJq68",
+            authDomain: "speedometer-tracker-79737.firebaseapp.com",
+            databaseURL: "https://speedometer-tracker-79737-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "speedometer-tracker-79737",
+            storageBucket: "speedometer-tracker-79737.firebasestorage.app",
+            messagingSenderId: "432424352062",
+            appId: "1:432424352062:web:109828729898ebd102146f"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        // ===== DOM ELEMENTS =====
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const errorOverlay = document.getElementById('errorOverlay');
+        const offlineOverlay = document.getElementById('offlineOverlay');
+        const speedOverlay = document.getElementById('speedOverlay');
+        const liveBadge = document.getElementById('liveBadge');
+        const sessionIdDisplay = document.getElementById('sessionIdDisplay');
+        const lastUpdateEl = document.getElementById('lastUpdate');
+
+        // Stats elements
+        const currentSpeedEl = document.getElementById('currentSpeed');
+        const maxSpeedEl = document.getElementById('maxSpeed');
+        const distanceEl = document.getElementById('distance');
+        const durationEl = document.getElementById('duration');
+
+        // ===== MAP SETUP =====
+        let map = null;
+        let driverMarker = null;
+        let accuracyCircle = null;
+
+        function initMap(lat, lon) {
+            if (map) return;
+
+            map = L.map('map').setView([lat, lon], 16);
+
+            // Dark tile layer
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>',
+                maxZoom: 19
+            }).addTo(map);
+
+            // Custom driver marker
+            const driverIcon = L.divIcon({
+                className: 'driver-marker-container',
+                html: '<div class="driver-marker"></div>',
+                iconSize: [20, 20],
+                iconAnchor: [10, 10]
+            });
+
+            driverMarker = L.marker([lat, lon], { icon: driverIcon }).addTo(map);
+
+            // Accuracy circle
+            accuracyCircle = L.circle([lat, lon], {
+                radius: 10,
+                color: '#00ffcc',
+                fillColor: '#00ffcc',
+                fillOpacity: 0.1,
+                weight: 2
+            }).addTo(map);
+        }
+
+        function updateMap(lat, lon, accuracy) {
+            if (!map) {
+                initMap(lat, lon);
+                loadingOverlay.classList.add('hidden');
+            }
+
+            // Update marker position
+            driverMarker.setLatLng([lat, lon]);
+
+            // Update accuracy circle
+            accuracyCircle.setLatLng([lat, lon]);
+            accuracyCircle.setRadius(accuracy);
+
+            // Pan to new location
+            map.panTo([lat, lon]);
+        }
+
+        // ===== GET SESSION ID FROM URL =====
+        function getSessionId() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('session');
+        }
+
+        // ===== UPDATE UI =====
+        function updateStats(data) {
+            currentSpeedEl.innerText = data.speed || 0;
+            maxSpeedEl.innerText = data.maxSpeed || 0;
+            distanceEl.innerText = data.distance || '0.00';
+            durationEl.innerText = data.duration || '00:00';
+
+            // Update last update time
+            if (data.timestamp) {
+                const date = new Date(data.timestamp);
+                lastUpdateEl.innerText = `Update: ${date.toLocaleTimeString('id-ID')}`;
+            }
+        }
+
+        // ===== MAIN =====
+        const sessionId = getSessionId();
+
+        if (!sessionId) {
+            loadingOverlay.classList.add('hidden');
+            errorOverlay.classList.remove('hidden');
+            document.getElementById('errorText').innerText = 'Link tidak valid - Session ID tidak ditemukan';
+        } else {
+            sessionIdDisplay.innerText = `Session ID: ${sessionId}`;
+
+            // Listen for session data
+            const sessionRef = database.ref('sessions/' + sessionId);
+
+            // Check if session exists and is active
+            sessionRef.once('value', (snapshot) => {
+                if (!snapshot.exists()) {
+                    loadingOverlay.classList.add('hidden');
+                    errorOverlay.classList.remove('hidden');
+                    return;
+                }
+
+                const sessionData = snapshot.val();
+                if (!sessionData.active) {
+                    loadingOverlay.classList.add('hidden');
+                    offlineOverlay.classList.remove('hidden');
+                    return;
+                }
+            });
+
+            // Listen for location updates
+            sessionRef.child('location').on('value', (snapshot) => {
+                const data = snapshot.val();
+
+                if (!data) return;
+
+                // Hide loading overlay
+                loadingOverlay.classList.add('hidden');
+
+                // Update map
+                updateMap(data.lat, data.lon, data.accuracy);
+
+                // Update stats
+                updateStats(data);
+            });
+
+            // Listen for session status changes
+            sessionRef.child('active').on('value', (snapshot) => {
+                const isActive = snapshot.val();
+
+                if (isActive === false) {
+                    liveBadge.innerText = 'OFFLINE';
+                    liveBadge.classList.add('offline');
+                }
+            });
+        }
+    </script>
+</body>
+
+</html>
