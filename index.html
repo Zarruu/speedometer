@@ -3,8 +3,12 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Web Speedometer</title>
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#0a0a0a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Speedometer</title>
     <link rel="stylesheet" href="style.css">
 </head>
 
@@ -12,11 +16,15 @@
 
     <h1>SPEEDOMETER</h1>
 
-    <div>
-        <div class="main-speed" id="speed">0</div>
-        <div class="unit">km/h</div>
+    <!-- Main Speed Display with Ring -->
+    <div class="speed-container">
+        <div class="speed-ring">
+            <div class="main-speed" id="speed">0</div>
+            <div class="unit">km/h</div>
+        </div>
     </div>
 
+    <!-- Stats Grid -->
     <div class="stats-grid">
         <div class="stat-box">
             <div class="stat-value" id="maxSpeed">0</div>
@@ -36,14 +44,18 @@
         </div>
     </div>
 
-    <div class="status" id="statusMsg">Menunggu GPS...</div>
-    <div class="gps-accuracy" id="gpsAccuracy">Akurasi: --</div>
+    <!-- Status & GPS Accuracy -->
+    <div class="status-container">
+        <div class="status" id="statusMsg">Tekan Start untuk mulai</div>
+        <div class="gps-accuracy" id="gpsAccuracy">📍 Akurasi: --</div>
+    </div>
 
+    <!-- Action Buttons -->
     <div class="btn-group">
         <button class="btn-start" id="btnStartStop" onclick="toggleTracking()">▶ Start</button>
         <button class="btn-lock" onclick="enablePocketMode()">🔒 Mode Saku</button>
         <button class="btn-history" onclick="toggleHistoryPanel()">📋 Riwayat</button>
-        <button class="btn-reset" onclick="resetTrip()">Reset</button>
+        <button class="btn-reset" onclick="resetTrip()">🔄 Reset</button>
     </div>
 
     <!-- Pocket Mode Overlay -->
@@ -62,7 +74,7 @@
             <!-- Items rendered by JavaScript -->
         </div>
         <div class="history-footer">
-            <button class="btn-clear-all" onclick="clearAllHistory()">Hapus Semua</button>
+            <button class="btn-clear-all" onclick="clearAllHistory()">🗑 Hapus Semua</button>
             <button class="btn-close-history" onclick="toggleHistoryPanel()">Tutup</button>
         </div>
     </div>
