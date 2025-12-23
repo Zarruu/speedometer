@@ -26,6 +26,9 @@ let lastTap = 0;
 let isTracking = false;
 let isSharing = false;
 let sessionId = null;
+let speedHistory = [];
+let distanceHistory = [];
+let timeHistory = [];
 
 // GPS Options
 const gpsOptions = {
@@ -81,6 +84,9 @@ function startTracking() {
 
     isTracking = true;
     startTime = new Date();
+    speedHistory = [];
+    distanceHistory = [];
+    timeHistory = [];
     watchId = navigator.geolocation.watchPosition(updatePosition, handleError, gpsOptions);
     timerInterval = setInterval(updateTimeAndAvg, 1000);
     requestWakeLock();
@@ -153,6 +159,14 @@ function updatePosition(position) {
     // Update Main UI
     speedEl.innerText = Math.round(currentSpeed);
     pocketSpeedDisplay.innerText = Math.round(currentSpeed);
+
+    // Record data for chart
+    if (startTime) {
+        const elapsedMinutes = (new Date() - startTime) / (1000 * 60);
+        timeHistory.push(elapsedMinutes);
+        speedHistory.push(currentSpeed);
+        distanceHistory.push(totalDistance);
+    }
 
     if (currentSpeed > maxSpeed) {
         maxSpeed = currentSpeed;
@@ -250,6 +264,9 @@ function resetTrip() {
     startTime = isTracking ? new Date() : null;
     prevLat = null;
     prevLon = null;
+    speedHistory = [];
+    distanceHistory = [];
+    timeHistory = [];
 
     // Reset UI
     speedEl.innerText = "0";
@@ -449,7 +466,12 @@ function saveTripToHistory() {
         maxSpeed: Math.round(maxSpeed),
         avgSpeed: parseInt(avgSpeedEl.innerText) || 0,
         distance: parseFloat(distanceEl.innerText) || 0,
-        duration: timeEl.innerText
+        duration: timeEl.innerText,
+        chartData: {
+            time: [...timeHistory],
+            speed: [...speedHistory],
+            distance: [...distanceHistory]
+        }
     };
 
     const history = loadHistory();
@@ -512,6 +534,11 @@ function renderHistory() {
                     <div class="history-stat-label">Durasi</div>
                 </div>
             </div>
+            ${trip.chartData && trip.chartData.time.length > 0 ? `
+            <div class="history-actions">
+                <button class="btn-view-chart" onclick="showChart(${trip.id})">📊 Lihat Grafik</button>
+            </div>
+            ` : ''}
         </div>
     `).join('');
 }
@@ -530,6 +557,152 @@ function clearAllHistory() {
 
     localStorage.removeItem(HISTORY_KEY);
     renderHistory();
+}
+
+// ===== CHART FUNCTIONS =====
+let currentChart = null;
+
+function showChart(tripId) {
+    const history = loadHistory();
+    const trip = history.find(t => t.id === tripId);
+    
+    if (!trip || !trip.chartData) {
+        alert('Data grafik tidak tersedia untuk perjalanan ini');
+        return;
+    }
+
+    // Populate chart data
+    document.getElementById('chartTripInfo').innerHTML = `
+        <strong>${trip.date} • ${trip.time}</strong><br>
+        Max: ${trip.maxSpeed} km/h | Jarak: ${trip.distance.toFixed(2)} km | Durasi: ${trip.duration}
+    `;
+
+    // Show chart panel
+    document.getElementById('chartPanel').classList.add('active');
+
+    // Destroy previous chart if exists
+    if (currentChart) {
+        currentChart.destroy();
+    }
+
+    // Prepare data
+    const { time, speed, distance } = trip.chartData;
+    const labels = time.map(t => `${Math.floor(t)}:${String(Math.round((t % 1) * 60)).padStart(2, '0')}`);
+
+    // Create chart
+    const ctx = document.getElementById('tripChart').getContext('2d');
+    currentChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Kecepatan (km/h)',
+                    data: speed,
+                    borderColor: '#00ffcc',
+                    backgroundColor: 'rgba(0, 255, 204, 0.1)',
+                    borderWidth: 2,
+                    tension: 0.4,
+                    fill: true,
+                    yAxisID: 'y'
+                },
+                {
+                    label: 'Jarak (km)',
+                    data: distance,
+                    borderColor: '#a855f7',
+                    backgroundColor: 'rgba(168, 85, 247, 0.1)',
+                    borderWidth: 2,
+                    tension: 0.4,
+                    fill: true,
+                    yAxisID: 'y1'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top',
+                    labels: {
+                        color: '#fff',
+                        font: {
+                            size: 12
+                        }
+                    }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+                    titleColor: '#00ffcc',
+                    bodyColor: '#fff',
+                    borderColor: '#00ffcc',
+                    borderWidth: 1
+                }
+            },
+            scales: {
+                x: {
+                    display: true,
+                    title: {
+                        display: true,
+                        text: 'Waktu (menit)',
+                        color: '#888'
+                    },
+                    ticks: {
+                        color: '#888',
+                        maxTicksLimit: 8
+                    },
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
+                    }
+                },
+                y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    title: {
+                        display: true,
+                        text: 'Kecepatan (km/h)',
+                        color: '#00ffcc'
+                    },
+                    ticks: {
+                        color: '#00ffcc'
+                    },
+                    grid: {
+                        color: 'rgba(0, 255, 204, 0.1)'
+                    }
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    title: {
+                        display: true,
+                        text: 'Jarak (km)',
+                        color: '#a855f7'
+                    },
+                    ticks: {
+                        color: '#a855f7'
+                    },
+                    grid: {
+                        drawOnChartArea: false,
+                    }
+                }
+            }
+        }
+    });
+}
+
+function closeChart() {
+    document.getElementById('chartPanel').classList.remove('active');
+    if (currentChart) {
+        currentChart.destroy();
+        currentChart = null;
+    }
 }
 
 // ===== INITIALIZE =====

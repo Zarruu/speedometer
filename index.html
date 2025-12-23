@@ -104,9 +104,29 @@
         </div>
     </div>
 
+    <!-- Chart Panel -->
+    <div id="chartPanel">
+        <div class="chart-header">
+            <h2>📊 Grafik Perjalanan</h2>
+            <button onclick="closeChart()">✕</button>
+        </div>
+        <div class="chart-info" id="chartTripInfo">
+            <!-- Trip info will be populated by JS -->
+        </div>
+        <div class="chart-container">
+            <canvas id="tripChart"></canvas>
+        </div>
+        <div class="chart-footer">
+            <button class="btn-close-chart" onclick="closeChart()">Tutup</button>
+        </div>
+    </div>
+
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
     <!-- App Script -->
     <script src="app.js"></script>
