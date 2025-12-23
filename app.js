@@ -27,7 +27,6 @@ let isTracking = false;
 let isSharing = false;
 let sessionId = null;
 let speedHistory = [];
-let distanceHistory = [];
 let timeHistory = [];
 
 // GPS Options
@@ -85,7 +84,6 @@ function startTracking() {
     isTracking = true;
     startTime = new Date();
     speedHistory = [];
-    distanceHistory = [];
     timeHistory = [];
     watchId = navigator.geolocation.watchPosition(updatePosition, handleError, gpsOptions);
     timerInterval = setInterval(updateTimeAndAvg, 1000);
@@ -165,7 +163,6 @@ function updatePosition(position) {
         const elapsedMinutes = (new Date() - startTime) / (1000 * 60);
         timeHistory.push(elapsedMinutes);
         speedHistory.push(currentSpeed);
-        distanceHistory.push(totalDistance);
     }
 
     if (currentSpeed > maxSpeed) {
@@ -265,7 +262,6 @@ function resetTrip() {
     prevLat = null;
     prevLon = null;
     speedHistory = [];
-    distanceHistory = [];
     timeHistory = [];
 
     // Reset UI
@@ -469,8 +465,7 @@ function saveTripToHistory() {
         duration: timeEl.innerText,
         chartData: {
             time: [...timeHistory],
-            speed: [...speedHistory],
-            distance: [...distanceHistory]
+            speed: [...speedHistory]
         }
     };
 
@@ -586,7 +581,7 @@ function showChart(tripId) {
     }
 
     // Prepare data
-    const { time, speed, distance } = trip.chartData;
+    const { time, speed } = trip.chartData;
     const labels = time.map(t => `${Math.floor(t)}:${String(Math.round((t % 1) * 60)).padStart(2, '0')}`);
 
     // Create chart
@@ -601,20 +596,14 @@ function showChart(tripId) {
                     data: speed,
                     borderColor: '#00ffcc',
                     backgroundColor: 'rgba(0, 255, 204, 0.1)',
-                    borderWidth: 2,
+                    borderWidth: 3,
                     tension: 0.4,
                     fill: true,
-                    yAxisID: 'y'
-                },
-                {
-                    label: 'Jarak (km)',
-                    data: distance,
-                    borderColor: '#a855f7',
-                    backgroundColor: 'rgba(168, 85, 247, 0.1)',
-                    borderWidth: 2,
-                    tension: 0.4,
-                    fill: true,
-                    yAxisID: 'y1'
+                    pointRadius: 3,
+                    pointHoverRadius: 6,
+                    pointBackgroundColor: '#00ffcc',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2
                 }
             ]
         },
@@ -627,21 +616,24 @@ function showChart(tripId) {
             },
             plugins: {
                 legend: {
-                    display: true,
-                    position: 'top',
-                    labels: {
-                        color: '#fff',
-                        font: {
-                            size: 12
-                        }
-                    }
+                    display: false
                 },
                 tooltip: {
                     backgroundColor: 'rgba(0, 0, 0, 0.9)',
                     titleColor: '#00ffcc',
                     bodyColor: '#fff',
                     borderColor: '#00ffcc',
-                    borderWidth: 1
+                    borderWidth: 1,
+                    padding: 12,
+                    displayColors: false,
+                    callbacks: {
+                        title: function(context) {
+                            return 'Waktu: ' + context[0].label;
+                        },
+                        label: function(context) {
+                            return 'Kecepatan: ' + Math.round(context.parsed.y) + ' km/h';
+                        }
+                    }
                 }
             },
             scales: {
@@ -650,47 +642,41 @@ function showChart(tripId) {
                     title: {
                         display: true,
                         text: 'Waktu (menit)',
-                        color: '#888'
+                        color: '#888',
+                        font: {
+                            size: 14,
+                            weight: '600'
+                        }
                     },
                     ticks: {
                         color: '#888',
                         maxTicksLimit: 8
                     },
                     grid: {
-                        color: 'rgba(255, 255, 255, 0.1)'
+                        color: 'rgba(255, 255, 255, 0.05)'
                     }
                 },
                 y: {
-                    type: 'linear',
                     display: true,
-                    position: 'left',
                     title: {
                         display: true,
                         text: 'Kecepatan (km/h)',
-                        color: '#00ffcc'
+                        color: '#00ffcc',
+                        font: {
+                            size: 14,
+                            weight: '600'
+                        }
                     },
                     ticks: {
-                        color: '#00ffcc'
+                        color: '#00ffcc',
+                        font: {
+                            size: 12
+                        }
                     },
                     grid: {
                         color: 'rgba(0, 255, 204, 0.1)'
-                    }
-                },
-                y1: {
-                    type: 'linear',
-                    display: true,
-                    position: 'right',
-                    title: {
-                        display: true,
-                        text: 'Jarak (km)',
-                        color: '#a855f7'
                     },
-                    ticks: {
-                        color: '#a855f7'
-                    },
-                    grid: {
-                        drawOnChartArea: false,
-                    }
+                    beginAtZero: true
                 }
             }
         }
